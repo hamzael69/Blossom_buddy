@@ -23,24 +23,66 @@ class PlantService implements PlantServiceInterface
      */
     public function fetchPlantsFromApi(): array
     {
+        $allPlants = [];
+        $currentPage = 1;
+        $perPage = 30; // Maximum autorisé par l'API
+        
         try {
-            $response = Http::get($this->apiUrl . '/species-list', [
-                'key' => $this->apiKey,
-                'page' => 1,
-                'per_page' => 30 // Limite pour les tests
-            ]);
+            do {
+                Log::info("Récupération de la page {$currentPage}...");
+                
+                $response = Http::timeout(60)->get($this->apiUrl . '/species-list', [
+                    'key' => $this->apiKey,
+                    'page' => $currentPage,
+                    'per_page' => $perPage
+                ]);
 
-            if ($response->successful()) {
-                return $response->json()['data'] ?? [];
-            }
+                if (!$response->successful()) {
+                    Log::error("Erreur API page {$currentPage}: " . $response->body());
+                    break;
+                }
 
-            Log::error('Erreur API plantes: ' . $response->body());
-            return [];
+                $data = $response->json();
+                $plants = $data['data'] ?? [];
+                
+                if (empty($plants)) {
+                    Log::info("Aucune plante trouvée sur la page {$currentPage}. Arrêt.");
+                    break;
+                }
+
+                // Ajoute les plantes de cette page au tableau global
+                $allPlants = array_merge($allPlants, $plants);
+                
+                Log::info("Page {$currentPage}: " . count($plants) . " plantes récupérées. Total: " . count($allPlants));
+
+                // Vérification s'il y a une page suivante
+                $totalPages = $data['last_page'] ?? null;
+                $hasNextPage = isset($data['links']['next']) || ($totalPages && $currentPage < $totalPages);
+                
+                if (!$hasNextPage) {
+                    Log::info("Dernière page atteinte. Arrêt.");
+                    break;
+                }
+
+                $currentPage++;
+                
+                // Petite pause pour éviter de surcharger l'API
+                sleep(1);
+                
+                // Limite de sécurité pour éviter une boucle infinie
+                if ($currentPage > 100) {
+                    Log::warning("Limite de 100 pages atteinte. Arrêt pour sécurité.");
+                    break;
+                }
+                
+            } while (true);
 
         } catch (\Exception $e) {
             Log::error('Exception lors de la récupération des plantes: ' . $e->getMessage());
-            return [];
         }
+
+        Log::info("Total final: " . count($allPlants) . " plantes récupérées");
+        return $allPlants;
     }
 
     /**
@@ -51,10 +93,13 @@ class PlantService implements PlantServiceInterface
         $stats = [
             'created' => 0,
             'updated' => 0,
-            'errors' => 0
+            'errors' => 0,
+            'total_processed' => count($plants)
         ];
 
-        foreach ($plants as $plantData) {
+        Log::info("Début de la mise à jour de la base de données avec " . count($plants) . " plantes");
+
+        foreach ($plants as $index => $plantData) {
             try {
                 $filteredData = $this->filterPlantData($plantData);
                 
@@ -70,12 +115,19 @@ class PlantService implements PlantServiceInterface
                         $stats['updated']++;
                     }
                 }
+                
+                // Log de progression tous les 100 éléments
+                if (($index + 1) % 100 === 0) {
+                    Log::info("Progression: " . ($index + 1) . "/" . count($plants) . " plantes traitées");
+                }
+                
             } catch (\Exception $e) {
                 $stats['errors']++;
                 Log::error('Erreur lors de la sauvegarde de la plante: ' . $e->getMessage());
             }
         }
 
+        Log::info("Mise à jour terminée: {$stats['created']} créées, {$stats['updated']} mises à jour, {$stats['errors']} erreurs");
         return $stats;
     }
 
@@ -84,6 +136,8 @@ class PlantService implements PlantServiceInterface
      */
     public function syncAllPlants(): array
     {
+        Log::info("Début de la synchronisation complète des plantes");
+        
         $plants = $this->fetchPlantsFromApi();
         
         if (empty($plants)) {
@@ -117,12 +171,25 @@ class PlantService implements PlantServiceInterface
      */
     private function extractWateringInfo(array $plantData): array
     {
-        // Adapte selon la structure de ton API
+        // Adapte selon la structure de l'API Perenual
         if (isset($plantData['watering'])) {
             return [
                 'value' => $plantData['watering'],
-                'unit' => 'days'
+                'unit' => 'frequency'
             ];
+        }
+
+        // Utilise d'autres champs si disponibles
+        if (isset($plantData['care_level'])) {
+            $careLevel = strtolower($plantData['care_level']);
+            switch ($careLevel) {
+                case 'low':
+                    return ['value' => '10-14', 'unit' => 'days'];
+                case 'medium':
+                    return ['value' => '5-7', 'unit' => 'days'];
+                case 'high':
+                    return ['value' => '2-3', 'unit' => 'days'];
+            }
         }
 
         // Valeurs par défaut si pas d'info d'arrosage
