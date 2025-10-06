@@ -7,6 +7,40 @@ use Illuminate\Http\Request;
 
 class UserPlantController extends Controller
 {
+     /**
+     * @OA\Post(
+     *     path="/api/user/plant",
+     *     tags={"User Plants"},
+     *     summary="Ajouter une plante à un utilisateur",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"common_name","city"},
+     *             @OA\Property(property="common_name", type="string", example="Ficus"),
+     *             @OA\Property(property="city", type="string", example="Paris")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Plante ajoutée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Plante ajoutée à l'utilisateur")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Plante non trouvée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Plante non trouvée")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié"
+     *     )
+     * )
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -28,6 +62,33 @@ class UserPlantController extends Controller
         return response()->json(['message' => 'Plante ajoutée à l’utilisateur']);
     }
 
+     /**
+     * @OA\Get(
+     *     path="/api/user/plants",
+     *     tags={"User Plants"},
+     *     summary="Récupérer toutes les plantes de l'utilisateur",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des plantes de l'utilisateur",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="common_name", type="string", example="Ficus"),
+     *                 @OA\Property(property="watering_general_benchmark", type="object"),
+     *                 @OA\Property(property="pivot", type="object",
+     *                     @OA\Property(property="city", type="string", example="Paris")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié"
+     *     )
+     * )
+     */
 
     public function index(Request $request)
     {
@@ -37,6 +98,39 @@ class UserPlantController extends Controller
         return response()->json($plants);
     }
 
+     /**
+     * @OA\Delete(
+     *     path="/api/user/plant/{id}",
+     *     tags={"User Plants"},
+     *     summary="Supprimer une plante de l'utilisateur",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer"),
+     *         description="ID de la relation plante-utilisateur"
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Plante supprimée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Plante retirée de la liste de l'utilisateur")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Relation plante-utilisateur non trouvée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Relation plante-utilisateur non trouvée")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié"
+     *     )
+     * )
+     */
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
