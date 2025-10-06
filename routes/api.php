@@ -20,3 +20,7 @@ Route::delete('/plant/{id}', [\App\Http\Controllers\PlantController::class, 'des
 Route::post('/user/plant', [\App\Http\Controllers\UserPlantController::class, 'store'])->middleware('auth:sanctum');
 Route::get('/user/plants', [\App\Http\Controllers\UserPlantController::class, 'index'])->middleware('auth:sanctum');
 Route::delete('/user/plant/{id}', [\App\Http\Controllers\UserPlantController::class, 'destroy'])->middleware('auth:sanctum');
+
+
+
+Route::post('/plant/update', [\App\Http\Controllers\PlantController::class, 'updateFromApi']);

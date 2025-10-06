@@ -350,6 +350,53 @@
                 }
             }
         },
+        "/api/plant/update": {
+            "post": {
+                "tags": [
+                    "Plants"
+                ],
+                "summary": "Mettre à jour la base de données des plantes depuis l'API externe",
+                "operationId": "674a221a6cf0d66c7ac3d946ced52bc5",
+                "responses": {
+                    "200": {
+                        "description": "Mise à jour réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Base de données mise à jour avec succès"
+                                        },
+                                        "stats": {
+                                            "properties": {
+                                                "created": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "updated": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "errors": {
+                                                    "type": "integer",
+                                                    "example": 0
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erreur lors de la mise à jour"
+                    }
+                }
+            }
+        },
         "/api/user/plant": {
             "post": {
                 "tags": [

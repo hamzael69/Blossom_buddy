@@ -4,9 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Plant;
 use Illuminate\Http\Request;
+use App\Contracts\PlantServiceInterface;
+use OpenApi\Annotations as OA;
 
 class PlantController extends Controller
 {
+
+
+    protected PlantServiceInterface $plantService;
+
+    public function __construct(PlantServiceInterface $plantService)
+    {
+        $this->plantService = $plantService;
+    }
+
+
       /**
      * @OA\Get(
      *     path="/api/plant",
@@ -180,4 +192,59 @@ class PlantController extends Controller
             'message' => 'Plante supprimée avec succès'
         ]);
     }
+
+
+
+
+
+    
+
+    /**
+     * @OA\Post(
+     *     path="/api/plant/update",
+     *     tags={"Plants"},
+     *     summary="Mettre à jour la base de données des plantes depuis l'API externe",
+     *     @OA\Response(
+     *         response=200,
+     *         description="Mise à jour réussie",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Base de données mise à jour avec succès"),
+     *             @OA\Property(property="stats", type="object",
+     *                 @OA\Property(property="created", type="integer", example=15),
+     *                 @OA\Property(property="updated", type="integer", example=5),
+     *                 @OA\Property(property="errors", type="integer", example=0)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Erreur lors de la mise à jour"
+     *     )
+     * )
+     */
+    public function updateFromApi()
+    {
+        try {
+            $result = $this->plantService->syncAllPlants();
+            
+            if (isset($result['error'])) {
+                return response()->json(['error' => $result['error']], 500);
+            }
+
+            return response()->json([
+                'message' => 'Base de données mise à jour avec succès',
+                'stats' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+
+
 }
